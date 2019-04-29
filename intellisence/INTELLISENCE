@@ -1,0 +1,5 @@
+#!/bin/sh
+
+echo f INTELLISENCE
+echo p INTELLISENCE1
+echo INTELLISENCE2

@@ -1,0 +1,95 @@
+// The module 'vscode' contains the VS Code extensibility API
+// Import the module and reference it with the alias vscode in your code below
+import * as vscode from 'vscode';
+import * as cp from 'child_process';
+import * as Commands from './Commands';
+
+function runFile(cmd:string, data: string[]|string) : Promise<string> {
+	let args = [cmd];
+	if (data instanceof Array){
+		data.forEach(o => args.push(o));
+	} else {
+		args.push(data);
+	}
+	return new Promise((resolve, reject) => {
+		// the resolve / reject functions control the fate of the promise
+		cp.execFile(vscode.workspace.rootPath + "/.vscode.lng", args, (error, stdout, stderr) => {
+			resolve(stdout + stderr);
+		});
+	});
+	
+}
+
+function formatData(...data :string[]){
+	//data = data.map(o => '"' + o + '"');
+	return data.join(" ");
+}
+let typeMap = {
+	'fi': vscode.CompletionItemKind.Field,
+	'v': vscode.CompletionItemKind.Variable,
+	'f': vscode.CompletionItemKind.Function,
+	'p': vscode.CompletionItemKind.Property
+};
+function createCompletionItem(o: string){
+	let chunks:string[] = o.split(" ");
+	let type = vscode.CompletionItemKind.Field;
+	if (chunks.length > 1 &&  (<any>typeMap)[chunks[0]] !== undefined){
+		type = <vscode.CompletionItemKind>((<any>typeMap)[chunks[0]]);
+		o = chunks.slice(1).join(" ");
+	}
+	return new vscode.CompletionItem(o, type);
+}
+
+export function activate(context: vscode.ExtensionContext) {
+	
+	return runFile(Commands.INIT, vscode.workspace.rootPath || "")
+	.then(res => {
+		console.log("Init complete: ", res, res.length);
+		let resChunks = res.trim().split(" ");
+		const provider = vscode.languages.registerCompletionItemProvider(
+			resChunks[1],
+			{
+				provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
+					
+					// get all text until the `position` and check if it reads `console.`
+					// and iff so then complete if `log`, `warn`, and `error`
+					let linePrefix = document.lineAt(position).text.substr(0, position.character);
+					if (vscode.window.activeTextEditor !== undefined){
+						return runFile(Commands.INTELLISENCE, formatData(linePrefix, vscode.window.activeTextEditor.document.fileName))
+							.then( res => {
+								let resChunks = res.split("\n").filter(o => o.length);
+								console.log("completion: ", resChunks);
+								return resChunks.map(createCompletionItem);
+							});
+					}
+					return undefined;
+				}
+			},
+			resChunks[0] // triggered whenever a '.' is being typed
+		);
+		const definitionProvider = vscode.languages.registerDefinitionProvider(resChunks[1], {
+			provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken){
+				if (vscode.window.activeTextEditor){
+					return runFile(Commands.DEFINITION, formatData(vscode.window.activeTextEditor.document.fileName))
+					.then( res => {
+						let resChunks = res.split("\n").filter(o => o.length);
+						return resChunks.map(line => {
+							let chunks = line.split(" ");
+
+							const definitionResource = vscode.Uri.file(chunks[0]);
+							const pos = new vscode.Position(parseInt(chunks[1]), parseInt(chunks[2]));
+							const location = new vscode.Location(definitionResource, pos);
+							console.log("Location is:", location);
+							return  location;
+						});
+					});
+				}
+			}
+		});
+		context.subscriptions.push(provider);
+		context.subscriptions.push(definitionProvider);
+	});
+}
+
+// this method is called when your extension is deactivated
+export function deactivate() {}
