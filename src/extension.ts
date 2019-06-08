@@ -5,6 +5,7 @@ import * as cp from 'child_process';
 import * as Commands from './Commands';
 
 function runFile(cmd:string, data: string[]|string) : Promise<string> {
+	console.log(`Running command ${cmd} with params: ${data}`);
 	let args = [cmd];
 	if (data instanceof Array){
 		data.forEach(o => args.push(o));
@@ -46,8 +47,12 @@ export function activate(context: vscode.ExtensionContext) {
 	.then(res => {
 		console.log("Init complete: ", res, res.length);
 		let resChunks = res.trim().split(" ");
+		let language = resChunks[1].trim();
+		let divider = resChunks[0].trim();
+		console.log(`lang: ${language} divider: ${divider}`);
+
 		const provider = vscode.languages.registerCompletionItemProvider(
-			resChunks[1],
+			language,
 			{
 				provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
 					
@@ -65,12 +70,14 @@ export function activate(context: vscode.ExtensionContext) {
 					return undefined;
 				}
 			},
-			resChunks[0] // triggered whenever a '.' is being typed
+			divider // triggered whenever a '.' is being typed
 		);
-		const definitionProvider = vscode.languages.registerDefinitionProvider(resChunks[1], {
+		const definitionProvider = vscode.languages.registerDefinitionProvider(language, {
 			provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken){
 				if (vscode.window.activeTextEditor){
-					return runFile(Commands.DEFINITION, formatData(vscode.window.activeTextEditor.document.fileName))
+					let linePrefix = document.lineAt(position).text.substr(0, position.character);
+
+					return runFile(Commands.DEFINITION, formatData(linePrefix, vscode.window.activeTextEditor.document.fileName))
 					.then( res => {
 						let resChunks = res.split("\n").filter(o => o.length);
 						return resChunks.map(line => {
