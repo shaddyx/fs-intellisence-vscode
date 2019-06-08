@@ -7,8 +7,7 @@ export class ArrayTools{
         minCount = minCount || 0;
         if (a.length > minCount){
             a.length && a.splice(a.length - 1, 1);
-        }
-        
+        }       
         return a;
     }
 }

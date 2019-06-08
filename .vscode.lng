@@ -2,5 +2,8 @@
 SCRIPT=$(readlink -f $0)
 SCRIPTPATH=`dirname $SCRIPT`
 export WORKSPACE_DIR=$SCRIPTPATH
-cd $SCRIPTPATH;
-./intellisence/$1 $@
+cd $SCRIPTPATH
+LOGFILE=$WORKSPACE_DIR/lnglog.log
+./intellisence/$1 $@ > $LOGFILE 2>&1
+cat $LOGFILE
+echo $@ >> $LOGFILE
