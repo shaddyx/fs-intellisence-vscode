@@ -3,12 +3,17 @@
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import * as Commands from './Commands';
-// import * as fs from 'fs';
+import * as fs from 'fs';
+import {FileTools} from './FileTools';
 
 function escapeShellArg (arg: string) {
-    return `'${arg.replace(/'/g, `'\\''`)}'`;
+	var buf = new Buffer(arg);
+	return buf.toString('base64');
 }
-
+function b64(o:string){
+	let buf = new Buffer(o);
+	return buf.toString("base64");
+}
 function runFile(cmd:string, data: string[]|string) : Promise<string> {
 	console.log(`Running command ${cmd} with params: ${data}`);
 	let args = [cmd];
@@ -17,20 +22,11 @@ function runFile(cmd:string, data: string[]|string) : Promise<string> {
 	} else {
 		args.push(data);
 	}
-	args = args.map(escapeShellArg);
-	const line = vscode.workspace.rootPath + "/.vscode.lng " + args.join(" ");
-	return new Promise((resolve, reject) => {
-		// the resolve / reject functions control the fate of the promise
-		cp.exec(line, (error, stdout, stderr) => {
-			resolve(stdout + stderr);
-		});
-	});
-	
+	return FileTools.run(vscode.workspace.rootPath + "/.vscode.lng ", args);
 }
 
 function formatData(...data :string[]){
-	//data = data.map(o => '"' + o + '"');
-	return data.join(" ");
+	return data;
 }
 let typeMap = {
 	'fi': vscode.CompletionItemKind.Field,
@@ -49,10 +45,11 @@ function createCompletionItem(o: string){
 }
 
 export function activate(context: vscode.ExtensionContext) {
-	// if (!fs.existsSync(vscode.workspace.rootPath + "/.vscode.lng")){
-	// 	vscode.window.showInformationMessage("fs-intellisense: .vscode.lng file not found, switching off...");
-	// 	return;
-	// }
+	if (!fs.existsSync(vscode.workspace.rootPath + "/.vscode.lng")){
+		vscode.window.showInformationMessage("fs-intellisense: .vscode.lng file not found, switching off...");
+		return;
+	}
+
 	return runFile(Commands.INIT, vscode.workspace.rootPath || "")
 	.then(res => {
 		console.log("Init complete: ", res, res.length);

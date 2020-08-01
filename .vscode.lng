@@ -4,6 +4,6 @@ SCRIPTPATH=`dirname $SCRIPT`
 export WORKSPACE_DIR=$SCRIPTPATH
 cd $SCRIPTPATH
 LOGFILE=$WORKSPACE_DIR/lnglog.log
-./intellisence/$1 $@ > $LOGFILE 2>&1
+./intellisence/$1 "$@" > $LOGFILE 2>&1
 cat $LOGFILE
-echo $@ >> $LOGFILE
+echo "$@" >> $LOGFILE
