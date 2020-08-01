@@ -2,7 +2,7 @@
 	"name": "fs-intellisence",
 	"displayName": "fs-intellisence",
 	"description": "This extension providing intellisense and goto definition features with data, received by bash script",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"publisher": "Shaddy",
 	"engines": {
 		"vscode": "^1.33.0"
